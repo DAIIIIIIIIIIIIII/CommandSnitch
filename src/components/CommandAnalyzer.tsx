@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Search, AlertTriangle, Code, Copy, Check } from 'lucide-react';
+import { Search, AlertTriangle, Code, Copy, Check, Loader2 } from 'lucide-react';
 import { analyzeCommand } from '../utils/commandParser';
 
 const CommandAnalyzer = () => {
@@ -8,14 +8,31 @@ const CommandAnalyzer = () => {
   const [result, setResult] = useState<any>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!command.trim()) return;
+    if (!command.trim() || isLoading) return;
 
-    const analysis = await analyzeCommand(command.trim());
-    setResult(analysis);
-    setIsExpanded(true);
+    setIsLoading(true);
+    try {
+      const analysis = await analyzeCommand(command.trim());
+      setResult(analysis);
+      setIsExpanded(true);
+    } catch (error) {
+      console.error('Errore nell\'analisi del comando:', error);
+      setResult({
+        type: 'Errore',
+        description: 'Errore nell\'analisi del comando',
+        warnings: ['Si è verificato un errore durante l\'analisi'],
+        urls: [],
+        parameters: {},
+        extractedCode: `Errore: ${error}`
+      });
+      setIsExpanded(true);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const copyToClipboard = async (text: string) => {
@@ -28,6 +45,7 @@ const CommandAnalyzer = () => {
     setCommand('');
     setResult(null);
     setIsExpanded(false);
+    setIsLoading(false);
   };
 
   return (
@@ -40,18 +58,22 @@ const CommandAnalyzer = () => {
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              {isLoading && (
+                <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-blue-400 w-4 h-4 animate-spin" />
+              )}
               <input
                 type="text"
                 value={command}
                 onChange={(e) => setCommand(e.target.value)}
                 placeholder="Incolla il comando e premi invio"
-                className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="w-full pl-10 pr-10 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                 autoFocus
+                disabled={isLoading}
               />
             </div>
             {!isExpanded && (
               <p className="text-xs text-gray-400 text-center">
-                Incolla il comando e premi invio
+                {isLoading ? 'Scaricamento e analisi in corso...' : 'Incolla il comando e premi invio'}
               </p>
             )}
           </form>
@@ -101,7 +123,7 @@ const CommandAnalyzer = () => {
             {result.extractedCode && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-green-400">CODICE ESTRATTO:</span>
+                  <span className="text-sm font-medium text-green-400">CODICE CHE VERREBBE ESEGUITO:</span>
                   <button
                     onClick={() => copyToClipboard(result.extractedCode)}
                     className="flex items-center space-x-1 text-xs text-gray-400 hover:text-white transition-colors"
@@ -110,7 +132,7 @@ const CommandAnalyzer = () => {
                     <span>{copied ? 'Copiato!' : 'Copia'}</span>
                   </button>
                 </div>
-                <pre className="bg-gray-900 rounded-md p-3 text-xs text-green-300 overflow-x-auto border border-gray-600">
+                <pre className="bg-gray-900 rounded-md p-3 text-xs text-green-300 overflow-x-auto border border-gray-600 max-h-96 overflow-y-auto">
                   <code>{result.extractedCode}</code>
                 </pre>
               </div>

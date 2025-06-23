@@ -8,6 +8,25 @@ export interface CommandAnalysis {
   parameters: Record<string, any>;
 }
 
+const downloadContent = async (url: string): Promise<string> => {
+  try {
+    // Prova prima con un proxy CORS
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const response = await fetch(proxyUrl);
+    const data = await response.json();
+    
+    if (data.contents) {
+      return data.contents;
+    }
+    
+    // Se il proxy fallisce, prova direttamente
+    const directResponse = await fetch(url);
+    return await directResponse.text();
+  } catch (error) {
+    throw new Error(`Impossibile scaricare il contenuto da ${url}: ${error}`);
+  }
+};
+
 export const analyzeCommand = async (command: string): Promise<CommandAnalysis> => {
   const result: CommandAnalysis = {
     type: 'Sconosciuto',
@@ -17,7 +36,6 @@ export const analyzeCommand = async (command: string): Promise<CommandAnalysis> 
     parameters: {}
   };
 
-  // Rimuovi spazi extra
   const cleanCommand = command.trim();
   
   // Estrai URL dal comando
@@ -25,12 +43,47 @@ export const analyzeCommand = async (command: string): Promise<CommandAnalysis> 
   const urls = cleanCommand.match(urlRegex) || [];
   result.urls = urls;
 
+  // Analizza comandi PowerShell (iwr, Invoke-WebRequest)
+  if (cleanCommand.includes('iwr') || cleanCommand.includes('Invoke-WebRequest')) {
+    result.type = 'PowerShell - Invoke-WebRequest';
+    result.description = 'Comando PowerShell per scaricare contenuto web';
+    
+    // Se c'è un URL, scarica il contenuto
+    if (urls.length > 0) {
+      try {
+        const content = await downloadContent(urls[0]);
+        result.extractedCode = content;
+        
+        // Analizza il tipo di contenuto
+        if (content.includes('#!/bin/bash') || content.includes('#!/bin/sh')) {
+          result.warnings.push('Il contenuto è uno script bash che verrebbe eseguito');
+        } else if (content.includes('function ') || content.includes('$')) {
+          result.warnings.push('Il contenuto contiene codice PowerShell');
+        } else if (content.includes('python') || content.includes('import ')) {
+          result.warnings.push('Il contenuto contiene codice Python');
+        }
+        
+        // Avviso generico per esecuzione automatica
+        if (cleanCommand.includes('| iex') || cleanCommand.includes('| Invoke-Expression')) {
+          result.warnings.push('ATTENZIONE: Il comando eseguirà automaticamente il codice scaricato!');
+        }
+        
+      } catch (error) {
+        result.extractedCode = `Errore nel download: ${error}`;
+        result.warnings.push('Impossibile scaricare il contenuto per l\'anteprima');
+      }
+    }
+    
+    if (cleanCommand.includes('select -ExpandProperty Content')) {
+      result.parameters['espansione'] = 'estrae solo il contenuto testuale';
+    }
+  }
+  
   // Analizza comandi curl
-  if (cleanCommand.startsWith('curl')) {
+  else if (cleanCommand.startsWith('curl')) {
     result.type = 'cURL - Download HTTP';
     result.description = 'Comando per scaricare contenuto da URL';
     
-    // Estrai parametri curl comuni
     const curlParams: Record<string, any> = {};
     
     if (cleanCommand.includes('-s') || cleanCommand.includes('--silent')) {
@@ -46,22 +99,19 @@ export const analyzeCommand = async (command: string): Promise<CommandAnalysis> 
     
     result.parameters = curlParams;
 
-    // Se c'è una pipe verso bash/sh
-    if (cleanCommand.includes('| bash') || cleanCommand.includes('| sh')) {
-      result.warnings.push('Il comando eseguirà automaticamente il codice scaricato');
-      result.warnings.push('ATTENZIONE: Questo può essere pericoloso!');
-    }
-
-    // Tenta di scaricare il contenuto se è sicuro
-    if (urls.length > 0 && !cleanCommand.includes('| bash') && !cleanCommand.includes('| sh')) {
+    // Scarica il contenuto se c'è un URL
+    if (urls.length > 0) {
       try {
-        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(urls[0])}`);
-        const data = await response.json();
-        if (data.contents) {
-          result.extractedCode = data.contents.substring(0, 2000) + (data.contents.length > 2000 ? '...\n[Codice troncato - mostra solo i primi 2000 caratteri]' : '');
+        const content = await downloadContent(urls[0]);
+        result.extractedCode = content;
+        
+        // Controlla se il contenuto verrà eseguito
+        if (cleanCommand.includes('| bash') || cleanCommand.includes('| sh')) {
+          result.warnings.push('PERICOLO: Il comando eseguirà automaticamente il codice scaricato!');
         }
       } catch (error) {
-        result.extractedCode = 'Impossibile scaricare il contenuto per l\'anteprima';
+        result.extractedCode = `Errore nel download: ${error}`;
+        result.warnings.push('Impossibile scaricare il contenuto per l\'anteprima');
       }
     }
   }
@@ -75,31 +125,19 @@ export const analyzeCommand = async (command: string): Promise<CommandAnalysis> 
       result.parameters['output'] = 'stdout (output diretto)';
     }
     
-    if (cleanCommand.includes('| bash') || cleanCommand.includes('| sh')) {
-      result.warnings.push('Il comando eseguirà automaticamente il file scaricato');
-      result.warnings.push('ATTENZIONE: Questo può essere pericoloso!');
-    }
-  }
-  
-  // Analizza PowerShell
-  else if (cleanCommand.includes('powershell') || cleanCommand.includes('pwsh')) {
-    result.type = 'PowerShell';
-    result.description = 'Comando PowerShell';
-    
-    if (cleanCommand.includes('Invoke-WebRequest') || cleanCommand.includes('iwr')) {
-      result.parameters['azione'] = 'download web';
-      urls.forEach(url => {
-        if (!result.urls.includes(url)) result.urls.push(url);
-      });
-    }
-    
-    if (cleanCommand.includes('Invoke-Expression') || cleanCommand.includes('iex')) {
-      result.warnings.push('Il comando eseguirà codice dinamicamente');
-      result.warnings.push('ATTENZIONE: Verifica sempre il codice prima dell\'esecuzione!');
-    }
-
-    if (cleanCommand.includes('-ExpandProperty Content')) {
-      result.parameters['espansione'] = 'estrae il contenuto della proprietà';
+    // Scarica il contenuto se c'è un URL
+    if (urls.length > 0) {
+      try {
+        const content = await downloadContent(urls[0]);
+        result.extractedCode = content;
+        
+        if (cleanCommand.includes('| bash') || cleanCommand.includes('| sh')) {
+          result.warnings.push('PERICOLO: Il comando eseguirà automaticamente il file scaricato!');
+        }
+      } catch (error) {
+        result.extractedCode = `Errore nel download: ${error}`;
+        result.warnings.push('Impossibile scaricare il contenuto per l\'anteprima');
+      }
     }
   }
   
@@ -128,7 +166,7 @@ export const analyzeCommand = async (command: string): Promise<CommandAnalysis> 
     }
   }
 
-  // Se contiene caratteri sospetti
+  // Controlli di sicurezza generali
   if (cleanCommand.includes('rm -rf') || cleanCommand.includes('del /f') || cleanCommand.includes('format')) {
     result.warnings.push('PERICOLO: Il comando potrebbe eliminare file o formattare dischi!');
   }
