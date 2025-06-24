@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Search, AlertTriangle, Code, Copy, Check, RotateCcw, ExternalLink, Package } from 'lucide-react';
 import { analyzeCommand } from '../utils/commandParser';
@@ -184,9 +185,6 @@ const CommandAnalyzer = () => {
                 </div>
                 <div className="space-y-2">
                   <div className="text-xs text-green-300">
-                    <span className="font-medium">Package:</span> {result.packageInfo.packageName}
-                  </div>
-                  <div className="text-xs text-green-300">
                     <span className="font-medium">Manager:</span> {result.packageInfo.packageManager}
                   </div>
                 </div>
@@ -213,7 +211,7 @@ const CommandAnalyzer = () => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-green-400">
-                    {result.packageInfo ? `PACKAGE TO INSTALL: ${result.packageInfo.packageName}` : 'CODE THAT WOULD BE EXECUTED:'}
+                    {result.packageInfo ? 'PACKAGE TO INSTALL:' : 'CODE THAT WOULD BE EXECUTED:'}
                   </span>
                   <div className="flex items-center space-x-2">
                     <span className="text-xs text-gray-400 uppercase">{result.codeLanguage}</span>
@@ -233,7 +231,10 @@ const CommandAnalyzer = () => {
                 <pre className={`bg-gray-900 rounded-md p-3 text-xs overflow-x-auto border border-gray-600 max-h-96 overflow-y-auto ${getLanguageColorClass(result.codeLanguage)}`}>
                   <code 
                     dangerouslySetInnerHTML={{ 
-                      __html: highlightCode(result.extractedCode, result.codeLanguage) 
+                      __html: highlightCode(
+                        result.packageInfo ? result.packageInfo.packageName : result.extractedCode, 
+                        result.codeLanguage
+                      ) 
                     }}
                   />
                 </pre>
