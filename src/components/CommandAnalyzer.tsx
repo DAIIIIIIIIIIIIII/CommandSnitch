@@ -80,7 +80,7 @@ const CommandAnalyzer = () => {
     
     if (language === 'bash') {
       highlightedCode = code
-        .replace(/(#!/bin/bash|#!/bin/sh)/g, '<span class="text-purple-400">$1</span>')
+        .replace(/(#!\/bin\/bash|#!\/bin\/sh)/g, '<span class="text-purple-400">$1</span>')
         .replace(/(\$\w+)/g, '<span class="text-cyan-300">$1</span>')
         .replace(/(echo|cd|ls|mkdir|rm|cp|mv|grep|sed|awk)/g, '<span class="text-blue-400">$1</span>');
     } else if (language === 'powershell') {
