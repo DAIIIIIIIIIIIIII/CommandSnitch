@@ -1,4 +1,3 @@
-
 export interface CommandAnalysis {
   type: string;
   description: string;
@@ -7,7 +6,115 @@ export interface CommandAnalysis {
   urls: string[];
   parameters: Record<string, any>;
   codeLanguage?: string;
+  packageInfo?: {
+    packageName: string;
+    packageManager: string;
+    description: string;
+    searchUrl?: string;
+  };
 }
+
+// Package managers and their configurations
+const PACKAGE_MANAGERS = {
+  pip: {
+    name: 'pip',
+    description: 'Python package installer, the standard package manager for Python',
+    searchUrlTemplate: 'https://pypi.org/project/{package}/',
+    installPattern: /pip\s+install\s+([^\s]+)/,
+  },
+  uv: {
+    name: 'uv',
+    description: 'Ultra-fast Python package installer and resolver',
+    searchUrlTemplate: 'https://pypi.org/project/{package}/',
+    installPattern: /uv\s+add\s+([^\s]+)|uv\s+pip\s+install\s+([^\s]+)/,
+  },
+  npm: {
+    name: 'npm',
+    description: 'Node Package Manager, the default package manager for Node.js',
+    searchUrlTemplate: 'https://www.npmjs.com/package/{package}',
+    installPattern: /npm\s+install\s+([^\s]+)|npm\s+i\s+([^\s]+)/,
+  },
+  yarn: {
+    name: 'yarn',
+    description: 'Fast, reliable, and secure dependency management for JavaScript',
+    searchUrlTemplate: 'https://www.npmjs.com/package/{package}',
+    installPattern: /yarn\s+add\s+([^\s]+)/,
+  },
+  pnpm: {
+    name: 'pnpm',
+    description: 'Fast, disk space efficient package manager for Node.js',
+    searchUrlTemplate: 'https://www.npmjs.com/package/{package}',
+    installPattern: /pnpm\s+add\s+([^\s]+)|pnpm\s+install\s+([^\s]+)/,
+  },
+  choco: {
+    name: 'Chocolatey',
+    description: 'Package manager for Windows, automates software installation',
+    searchUrlTemplate: 'https://chocolatey.org/packages/{package}',
+    installPattern: /choco\s+install\s+([^\s]+)/,
+  },
+  winget: {
+    name: 'winget',
+    description: 'Windows Package Manager, native package manager for Windows 10/11',
+    searchUrlTemplate: 'https://winget.run/pkg/{package}',
+    installPattern: /winget\s+install\s+([^\s]+)/,
+  },
+  scoop: {
+    name: 'Scoop',
+    description: 'Command-line installer for Windows, focuses on open-source software',
+    searchUrlTemplate: 'https://scoop.sh/#/apps?q={package}',
+    installPattern: /scoop\s+install\s+([^\s]+)/,
+  },
+  conda: {
+    name: 'Conda',
+    description: 'Package manager for Python and other languages, part of Anaconda',
+    searchUrlTemplate: 'https://anaconda.org/search?q={package}',
+    installPattern: /conda\s+install\s+([^\s]+)/,
+  },
+  mamba: {
+    name: 'Mamba',
+    description: 'Fast, robust, and cross-platform package manager (conda alternative)',
+    searchUrlTemplate: 'https://anaconda.org/search?q={package}',
+    installPattern: /mamba\s+install\s+([^\s]+)/,
+  },
+  cargo: {
+    name: 'Cargo',
+    description: 'Rust package manager and build tool',
+    searchUrlTemplate: 'https://crates.io/crates/{package}',
+    installPattern: /cargo\s+install\s+([^\s]+)/,
+  },
+  gem: {
+    name: 'RubyGems',
+    description: 'Package manager for Ruby programming language',
+    searchUrlTemplate: 'https://rubygems.org/gems/{package}',
+    installPattern: /gem\s+install\s+([^\s]+)/,
+  },
+  go: {
+    name: 'Go Modules',
+    description: 'Go programming language module system',
+    searchUrlTemplate: 'https://pkg.go.dev/{package}',
+    installPattern: /go\s+install\s+([^\s@]+)/,
+  },
+};
+
+// Programming languages and tools
+const PROGRAMMING_TOOLS = {
+  python: {
+    name: 'Python',
+    description: 'High-level programming language for general-purpose programming',
+  },
+  python3: {
+    name: 'Python 3',
+    description: 'Python 3.x interpreter for running Python scripts',
+  },
+  flutter: {
+    name: 'Flutter',
+    description: 'Google\'s UI toolkit for building cross-platform applications',
+  },
+  dart: {
+    name: 'Dart',
+    description: 'Programming language optimized for building mobile, desktop, server, and web applications',
+  },
+};
 
 const downloadContent = async (url: string): Promise<string> => {
   try {
@@ -65,6 +172,52 @@ export const analyzeCommand = async (command: string): Promise<CommandAnalysis> 
   // Extract URLs from command
   const commandUrlRegex = /https?:\/\/[^\s'"]+/g;
   const commandUrls = cleanCommand.match(commandUrlRegex) || [];
+
+  // Check for package managers first
+  for (const [key, manager] of Object.entries(PACKAGE_MANAGERS)) {
+    if (cleanCommand.startsWith(key + ' ') || cleanCommand.includes(' ' + key + ' ')) {
+      result.type = `${manager.name} - Package Manager`;
+      result.description = manager.description;
+      result.extractedCode = cleanCommand;
+      result.codeLanguage = 'bash';
+      
+      // Extract package name
+      const match = cleanCommand.match(manager.installPattern);
+      if (match) {
+        const packageName = match[1] || match[2]; // Some patterns have multiple groups
+        if (packageName) {
+          result.packageInfo = {
+            packageName: packageName,
+            packageManager: manager.name,
+            description: `Installing package: ${packageName}`,
+            searchUrl: manager.searchUrlTemplate.replace('{package}', packageName)
+          };
+        }
+      }
+      
+      if (cleanCommand.includes('install') || cleanCommand.includes('add')) {
+        result.warnings.push('This command will install software on your system');
+      }
+      
+      return result;
+    }
+  }
+
+  // Check for programming tools
+  for (const [key, tool] of Object.entries(PROGRAMMING_TOOLS)) {
+    if (cleanCommand.startsWith(key + ' ') || cleanCommand === key) {
+      result.type = `${tool.name} - Programming Tool`;
+      result.description = tool.description;
+      result.extractedCode = cleanCommand;
+      result.codeLanguage = key === 'python' || key === 'python3' ? 'python' : 'bash';
+      
+      if (cleanCommand.includes('-c')) {
+        result.warnings.push('This command executes inline code');
+      }
+      
+      return result;
+    }
+  }
 
   // Analyze PowerShell commands (iwr, Invoke-WebRequest)
   if (cleanCommand.includes('iwr') || cleanCommand.includes('Invoke-WebRequest')) {

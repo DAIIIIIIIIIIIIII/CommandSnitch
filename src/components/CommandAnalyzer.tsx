@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Search, AlertTriangle, Code, Copy, Check, RotateCcw } from 'lucide-react';
+import { Search, AlertTriangle, Code, Copy, Check, RotateCcw, ExternalLink, Package } from 'lucide-react';
 import { analyzeCommand } from '../utils/commandParser';
 
 const CommandAnalyzer = () => {
@@ -175,6 +174,35 @@ const CommandAnalyzer = () => {
               </div>
               <div className="text-xs text-gray-300">{result.description}</div>
             </div>
+
+            {/* Package information */}
+            {result.packageInfo && (
+              <div className="bg-green-900/20 border border-green-500/30 rounded-md p-3">
+                <div className="flex items-center space-x-2 mb-2">
+                  <Package className="w-4 h-4 text-green-400" />
+                  <span className="text-sm font-medium text-green-400">PACKAGE INSTALLATION</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-xs text-green-300">
+                    <span className="font-medium">Package:</span> {result.packageInfo.packageName}
+                  </div>
+                  <div className="text-xs text-green-300">
+                    <span className="font-medium">Manager:</span> {result.packageInfo.packageManager}
+                  </div>
+                  {result.packageInfo.searchUrl && (
+                    <a
+                      href={result.packageInfo.searchUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center space-x-1 text-xs text-blue-300 hover:text-blue-200 transition-colors"
+                    >
+                      <span>View package information</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Security warnings */}
             {result.warnings && result.warnings.length > 0 && (
