@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Search, AlertTriangle, Code, Copy, Check, RotateCcw, ExternalLink, Package } from 'lucide-react';
 import { analyzeCommand } from '../utils/commandParser';
+import { useShiki } from '../hooks/useShiki';
 
 const CommandAnalyzer = () => {
   const [command, setCommand] = useState('');
@@ -10,6 +11,7 @@ const CommandAnalyzer = () => {
   const [copied, setCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const { highlightCode, isLoading: shikiLoading } = useShiki();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,38 +71,6 @@ const CommandAnalyzer = () => {
       default:
         return 'text-green-300';
     }
-  };
-
-  const highlightCode = (code: string, language: string) => {
-    // Simple syntax highlighting based on language
-    const colorClass = getLanguageColorClass(language);
-    
-    // Basic keyword highlighting for different languages
-    let highlightedCode = code;
-    
-    if (language === 'bash') {
-      highlightedCode = code
-        .replace(/(#!\/bin\/bash|#!\/bin\/sh)/g, '<span class="text-purple-400">$1</span>')
-        .replace(/(\$\w+)/g, '<span class="text-cyan-300">$1</span>')
-        .replace(/(echo|cd|ls|mkdir|rm|cp|mv|grep|sed|awk)/g, '<span class="text-blue-400">$1</span>');
-    } else if (language === 'powershell') {
-      highlightedCode = code
-        .replace(/(\$\w+)/g, '<span class="text-cyan-300">$1</span>')
-        .replace(/(function|param|if|else|foreach|while)/g, '<span class="text-purple-400">$1</span>')
-        .replace(/(Get-|Set-|New-|Remove-|Invoke-)\w+/g, '<span class="text-blue-400">$&</span>');
-    } else if (language === 'python') {
-      highlightedCode = code
-        .replace(/(def|class|import|from|if|else|elif|for|while|try|except|finally|with|as)/g, '<span class="text-purple-400">$1</span>')
-        .replace(/(print|input|len|range|str|int|float|list|dict)/g, '<span class="text-blue-400">$1</span>')
-        .replace(/(['"][^'"]*['"])/g, '<span class="text-green-400">$1</span>');
-    } else if (language === 'javascript') {
-      highlightedCode = code
-        .replace(/(function|const|let|var|if|else|for|while|try|catch|finally|class|extends)/g, '<span class="text-purple-400">$1</span>')
-        .replace(/(console|document|window|Array|Object|String|Number)/g, '<span class="text-blue-400">$1</span>')
-        .replace(/(['"][^'"]*['"])/g, '<span class="text-green-400">$1</span>');
-    }
-    
-    return highlightedCode;
   };
 
   return (
@@ -228,8 +198,13 @@ const CommandAnalyzer = () => {
                     )}
                   </div>
                 </div>
-                <pre className={`bg-gray-900 rounded-md p-3 text-xs overflow-x-auto border border-gray-600 max-h-96 overflow-y-auto ${getLanguageColorClass(result.codeLanguage)}`}>
-                  <code 
+                {shikiLoading ? (
+                  <div className="bg-gray-900 rounded-md p-3 text-xs border border-gray-600">
+                    <div className="text-gray-400">Loading syntax highlighter...</div>
+                  </div>
+                ) : (
+                  <div 
+                    className="bg-gray-900 rounded-md border border-gray-600 max-h-96 overflow-y-auto text-xs [&>pre]:!m-0 [&>pre]:!p-3 [&>pre]:!bg-transparent [&>pre]:!overflow-x-auto"
                     dangerouslySetInnerHTML={{ 
                       __html: highlightCode(
                         result.packageInfo ? result.packageInfo.packageName : result.extractedCode, 
@@ -237,7 +212,7 @@ const CommandAnalyzer = () => {
                       ) 
                     }}
                   />
-                </pre>
+                )}
               </div>
             )}
 
