@@ -189,17 +189,6 @@ const CommandAnalyzer = () => {
                   <div className="text-xs text-green-300">
                     <span className="font-medium">Manager:</span> {result.packageInfo.packageManager}
                   </div>
-                  {result.packageInfo.searchUrl && (
-                    <a
-                      href={result.packageInfo.searchUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center space-x-1 text-xs text-blue-300 hover:text-blue-200 transition-colors"
-                    >
-                      <span>View package information</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  )}
                 </div>
               </div>
             )}
@@ -219,12 +208,27 @@ const CommandAnalyzer = () => {
               </div>
             )}
 
-            {/* Extracted code */}
+            {/* Package to install or Code that would be executed */}
             {result.extractedCode && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-green-400">CODE THAT WOULD BE EXECUTED:</span>
-                  <span className="text-xs text-gray-400 uppercase">{result.codeLanguage}</span>
+                  <span className="text-sm font-medium text-green-400">
+                    {result.packageInfo ? `PACKAGE TO INSTALL: ${result.packageInfo.packageName}` : 'CODE THAT WOULD BE EXECUTED:'}
+                  </span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs text-gray-400 uppercase">{result.codeLanguage}</span>
+                    {result.packageInfo?.searchUrl && (
+                      <a
+                        href={result.packageInfo.searchUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center space-x-1 text-xs text-blue-300 hover:text-blue-200 transition-colors"
+                      >
+                        <span>View package information</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
                 </div>
                 <pre className={`bg-gray-900 rounded-md p-3 text-xs overflow-x-auto border border-gray-600 max-h-96 overflow-y-auto ${getLanguageColorClass(result.codeLanguage)}`}>
                   <code 

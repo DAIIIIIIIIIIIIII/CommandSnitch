@@ -56,7 +56,7 @@ const PACKAGE_MANAGERS = {
     name: 'winget',
     description: 'Windows Package Manager, native package manager for Windows 10/11',
     searchUrlTemplate: 'https://winget.run/pkg/{package}',
-    installPattern: /winget\s+install\s+([^\s]+)/,
+    installPattern: /winget\s+install\s+(?:--id\s+)?([^\s-]+(?:\.[^\s-]+)*)/,
   },
   scoop: {
     name: 'Scoop',
