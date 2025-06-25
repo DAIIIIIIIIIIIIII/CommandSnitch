@@ -219,9 +219,10 @@ export const analyzeCommand = async (command: string): Promise<CommandAnalysis> 
     }
   }
 
-  // Analyze PowerShell commands (iwr, Invoke-WebRequest)
-  if (cleanCommand.includes('iwr') || cleanCommand.includes('Invoke-WebRequest')) {
-    result.type = 'PowerShell - Invoke-WebRequest';
+  // Analyze PowerShell commands (iwr, Invoke-WebRequest, irm, Invoke-RestMethod)
+  if (cleanCommand.includes('iwr') || cleanCommand.includes('Invoke-WebRequest') || 
+      cleanCommand.includes('irm') || cleanCommand.includes('Invoke-RestMethod')) {
+    result.type = 'PowerShell - Web Request';
     result.description = 'PowerShell command to download web content';
     
     // If there's a URL, download the content
