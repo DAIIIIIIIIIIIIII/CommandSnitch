@@ -121,16 +121,59 @@ const downloadContent = async (url: string): Promise<string> => {
     // Try with CORS proxy first
     const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
     const response = await fetch(proxyUrl);
+    
+    if (!response.ok) {
+      throw new Error(`CORS proxy returned ${response.status}: ${response.statusText}`);
+    }
+    
     const data = await response.json();
     
-    if (data.contents) {
+    if (data.contents && data.contents.trim()) {
       return data.contents;
     }
     
-    // If proxy fails, try directly
-    const directResponse = await fetch(url);
-    return await directResponse.text();
+    // If no contents or empty, throw error
+    throw new Error('CORS proxy returned empty content');
+    
   } catch (error) {
+    // Provide more detailed error information
+    if (error instanceof Error) {
+      if (error.message.includes('Content-Length')) {
+        return `Unable to download content from ${url}
+
+This is likely a PowerShell script that would be downloaded and executed.
+The content couldn't be previewed due to a server configuration issue (Content-Length mismatch).
+
+⚠️  WARNING: This command would download and execute code from the internet!
+⚠️  Only run this if you trust the source completely.
+
+The command would:
+1. Download a script from ${url}
+2. Execute it immediately with PowerShell (| iex)
+
+For safety, you should:
+- Visit ${url} in your browser first to review the script
+- Download it manually and review the code before running
+- Consider the security implications of running remote scripts`;
+      }
+      
+      if (error.message.includes('CORS') || error.message.includes('network')) {
+        return `Unable to download content from ${url}
+
+This appears to be a script download command that couldn't be previewed due to network restrictions.
+
+⚠️  WARNING: This command would download and execute code from the internet!
+
+The command would:
+1. Download a script from ${url}
+2. Execute it immediately (${url.includes('win') ? 'likely a Windows setup/utility script' : 'unknown script type'})
+
+For security, please:
+- Visit the URL in your browser to see what it contains
+- Only run if you trust the source completely`;
+      }
+    }
+    
     throw new Error(`Unable to download content from ${url}: ${error}`);
   }
 };
@@ -250,6 +293,7 @@ export const analyzeCommand = async (command: string): Promise<CommandAnalysis> 
       } catch (error) {
         result.extractedCode = `Download error: ${error}`;
         result.warnings.push('Unable to download content for preview');
+        result.warnings.push('Command would download and execute remote code - exercise extreme caution!');
       }
     }
     
