@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { getHighlighter, type Highlighter } from 'shiki';
+import { createHighlighter, type Highlighter } from 'shiki';
 
 export const useShiki = () => {
   const [highlighter, setHighlighter] = useState<Highlighter | null>(null);
@@ -9,7 +9,7 @@ export const useShiki = () => {
   useEffect(() => {
     const initHighlighter = async () => {
       try {
-        const shikiHighlighter = await getHighlighter({
+        const shikiHighlighter = await createHighlighter({
           themes: ['github-dark'],
           langs: ['bash', 'powershell', 'python', 'javascript', 'typescript', 'c', 'java', 'json', 'text']
         });
