@@ -136,45 +136,8 @@ const downloadContent = async (url: string): Promise<string> => {
     throw new Error('CORS proxy returned empty content');
     
   } catch (error) {
-    // Provide more detailed error information
-    if (error instanceof Error) {
-      if (error.message.includes('Content-Length')) {
-        return `Unable to download content from ${url}
-
-This is likely a PowerShell script that would be downloaded and executed.
-The content couldn't be previewed due to a server configuration issue (Content-Length mismatch).
-
-⚠️  WARNING: This command would download and execute code from the internet!
-⚠️  Only run this if you trust the source completely.
-
-The command would:
-1. Download a script from ${url}
-2. Execute it immediately with PowerShell (| iex)
-
-For safety, you should:
-- Visit ${url} in your browser first to review the script
-- Download it manually and review the code before running
-- Consider the security implications of running remote scripts`;
-      }
-      
-      if (error.message.includes('CORS') || error.message.includes('network')) {
-        return `Unable to download content from ${url}
-
-This appears to be a script download command that couldn't be previewed due to network restrictions.
-
-⚠️  WARNING: This command would download and execute code from the internet!
-
-The command would:
-1. Download a script from ${url}
-2. Execute it immediately (${url.includes('win') ? 'likely a Windows setup/utility script' : 'unknown script type'})
-
-For security, please:
-- Visit the URL in your browser to see what it contains
-- Only run if you trust the source completely`;
-      }
-    }
-    
-    throw new Error(`Unable to download content from ${url}: ${error}`);
+    // Always throw error - we'll handle this at the calling site
+    throw error;
   }
 };
 
@@ -270,13 +233,18 @@ export const analyzeCommand = async (command: string): Promise<CommandAnalysis> 
     result.type = 'PowerShell - Web Request';
     result.description = 'PowerShell command to download web content';
     
-    // If there's a URL, download the content
+    // Always show the original command first
+    result.extractedCode = cleanCommand;
+    result.codeLanguage = 'powershell';
+    
+    // If there's a URL, try to download the content
     if (commandUrls.length > 0) {
       try {
         const content = await downloadContent(commandUrls[0]);
+        // If download succeeds, show the downloaded content instead
         result.extractedCode = content;
         result.codeLanguage = detectCodeLanguage(content);
-        result.urls = extractUrlsFromCode(content);
+        result.urls = [...new Set(extractUrlsFromCode(content))];
         
         // Analyze content type
         if (content.includes('#!/bin/bash') || content.includes('#!/bin/sh')) {
@@ -287,16 +255,28 @@ export const analyzeCommand = async (command: string): Promise<CommandAnalysis> 
           result.warnings.push('Content contains Python code');
         }
         
-        // Generic warning for automatic execution
-        if (cleanCommand.includes('| iex') || cleanCommand.includes('| Invoke-Expression')) {
-          result.warnings.push('WARNING: The command will automatically execute the downloaded code!');
+      } catch (error) {
+        // Keep the original command as extractedCode, but add warning message
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        
+        if (errorMessage.includes('Content-Length')) {
+          result.warnings.push('Unable to preview: Server configuration issue (Content-Length mismatch)');
+          result.warnings.push('This is likely a PowerShell script that would be downloaded and executed');
+        } else if (errorMessage.includes('CORS') || errorMessage.includes('network')) {
+          result.warnings.push('Unable to preview: Network restrictions');
+          result.warnings.push('This appears to be a script download command');
+        } else {
+          result.warnings.push('Unable to download content for preview');
         }
         
-      } catch (error) {
-        result.extractedCode = `Download error: ${error}`;
-        result.warnings.push('Unable to download content for preview');
-        result.warnings.push('Command would download and execute remote code - exercise extreme caution!');
+        result.warnings.push('⚠️ WARNING: This command would download and execute code from the internet!');
+        result.warnings.push('⚠️ Only run this if you trust the source completely');
       }
+    }
+    
+    // Generic warning for automatic execution
+    if (cleanCommand.includes('| iex') || cleanCommand.includes('| Invoke-Expression')) {
+      result.warnings.push('WARNING: The command will automatically execute the downloaded code!');
     }
     
     if (cleanCommand.includes('select -ExpandProperty Content')) {
