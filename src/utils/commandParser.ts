@@ -197,7 +197,9 @@ const detectCodeLanguage = (content: string): string => {
 
 const extractUrlsFromCode = (content: string): string[] => {
   const urlRegex = /https?:\/\/[^\s'"<>()]+/g;
-  return content.match(urlRegex) || [];
+  const urls = content.match(urlRegex) || [];
+  // Remove duplicates using Set
+  return [...new Set(urls)];
 };
 
 export const analyzeCommand = async (command: string): Promise<CommandAnalysis> => {

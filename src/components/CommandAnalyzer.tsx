@@ -11,6 +11,7 @@ const CommandAnalyzer = () => {
   const [copied, setCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [showSlowMessage, setShowSlowMessage] = useState(false);
   const { highlightCode, isLoading: shikiLoading } = useShiki();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,6 +20,13 @@ const CommandAnalyzer = () => {
 
     setIsLoading(true);
     setIsSubmitted(true);
+    setShowSlowMessage(false);
+    
+    // Set timeout to show slow message after 5 seconds
+    const slowTimeout = setTimeout(() => {
+      setShowSlowMessage(true);
+    }, 5000);
+
     try {
       const analysis = await analyzeCommand(command.trim());
       setResult(analysis);
@@ -36,7 +44,9 @@ const CommandAnalyzer = () => {
       });
       setIsExpanded(true);
     } finally {
+      clearTimeout(slowTimeout);
       setIsLoading(false);
+      setShowSlowMessage(false);
     }
   };
 
@@ -52,6 +62,7 @@ const CommandAnalyzer = () => {
     setIsExpanded(false);
     setIsLoading(false);
     setIsSubmitted(false);
+    setShowSlowMessage(false);
   };
 
   const getLanguageColorClass = (language: string) => {
@@ -123,7 +134,12 @@ const CommandAnalyzer = () => {
             </div>
             {!isExpanded && (
               <p className="text-xs text-gray-400 text-center">
-                {isLoading ? 'Downloading and analyzing...' : 'Paste the command and press enter'}
+                {isLoading 
+                  ? showSlowMessage 
+                    ? 'This is taking a bit longer than usual...' 
+                    : 'Downloading and analyzing...' 
+                  : 'Paste the command and press enter'
+                }
               </p>
             )}
           </form>
@@ -204,7 +220,8 @@ const CommandAnalyzer = () => {
                   </div>
                 ) : (
                   <div 
-                    className="bg-gray-900 rounded-md border border-gray-600 max-h-96 overflow-y-auto text-xs [&>pre]:!m-0 [&>pre]:!p-3 [&>pre]:!bg-transparent [&>pre]:!overflow-x-auto"
+                    className="bg-gray-900 rounded-md border border-gray-600 overflow-y-auto text-xs [&>pre]:!m-0 [&>pre]:!p-3 [&>pre]:!bg-transparent [&>pre]:!overflow-x-auto"
+                    style={{ maxHeight: 'none' }}
                     dangerouslySetInnerHTML={{ 
                       __html: highlightCode(
                         result.packageInfo ? result.packageInfo.packageName : result.extractedCode, 
@@ -221,7 +238,7 @@ const CommandAnalyzer = () => {
               <div className="space-y-2">
                 <span className="text-sm font-medium text-yellow-400">URLS DETECTED IN CODE:</span>
                 <div className="space-y-1">
-                  {result.urls.map((url: string, index: number) => (
+                  {[...new Set(result.urls)].map((url: string, index: number) => (
                     <div key={index} className="bg-gray-700 rounded p-2">
                       <code className="text-xs text-yellow-300 break-all">{url}</code>
                     </div>
