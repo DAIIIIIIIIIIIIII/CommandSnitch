@@ -22,6 +22,19 @@ const CommandAnalyzer = () => {
     setIsSubmitted(true);
     setShowSlowMessage(false);
     
+    // Immediately show the command with basic info
+    const immediateResult = {
+      type: 'Analyzing...',
+      description: 'Command analysis in progress',
+      warnings: [],
+      urls: [],
+      parameters: {},
+      extractedCode: command.trim(),
+      codeLanguage: 'text'
+    };
+    setResult(immediateResult);
+    setIsExpanded(true);
+    
     // Set timeout to show slow message after 5 seconds
     const slowTimeout = setTimeout(() => {
       setShowSlowMessage(true);
@@ -30,7 +43,6 @@ const CommandAnalyzer = () => {
     try {
       const analysis = await analyzeCommand(command.trim());
       setResult(analysis);
-      setIsExpanded(true);
     } catch (error) {
       console.error('Error analyzing command:', error);
       setResult({
@@ -39,10 +51,9 @@ const CommandAnalyzer = () => {
         warnings: ['An error occurred during analysis'],
         urls: [],
         parameters: {},
-        extractedCode: `Error: ${error}`,
+        extractedCode: command.trim(),
         codeLanguage: 'text'
       });
-      setIsExpanded(true);
     } finally {
       clearTimeout(slowTimeout);
       setIsLoading(false);
@@ -151,6 +162,12 @@ const CommandAnalyzer = () => {
             <div className="flex items-center space-x-2">
               <Code className="w-4 h-4 text-blue-400" />
               <h3 className="text-lg font-semibold text-white">Command Analysis</h3>
+              {isLoading && (
+                <div className="flex items-center space-x-2 text-xs text-blue-400">
+                  <div className="animate-spin w-3 h-3 border border-blue-400 border-t-transparent rounded-full"></div>
+                  <span>{showSlowMessage ? 'This is taking a bit longer than usual...' : 'Analyzing...'}</span>
+                </div>
+              )}
             </div>
 
             {/* Command type */}
