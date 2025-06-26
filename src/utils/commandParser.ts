@@ -143,7 +143,8 @@ const downloadContent = async (url: string): Promise<string> => {
   try {
     // Step 1: Try to follow redirects to get the final URL
     const finalUrl = await followRedirects(url);
-    console.log(`Attempting to download from: ${finalUrl}`);
+    console.log(`🔍 DOWNLOAD DEBUG - Original: ${url}`);
+    console.log(`🔍 DOWNLOAD DEBUG - Final URL: ${finalUrl}`);
     
     // Step 2: Try multiple CORS proxies in order of reliability
     const corsProxies = [
@@ -154,7 +155,7 @@ const downloadContent = async (url: string): Promise<string> => {
     
     for (const proxyUrl of corsProxies) {
       try {
-        console.log(`Trying proxy: ${proxyUrl}`);
+        console.log(`🔍 DOWNLOAD DEBUG - Trying proxy: ${proxyUrl}`);
         
         let response;
         let content;
@@ -175,12 +176,14 @@ const downloadContent = async (url: string): Promise<string> => {
         }
         
         if (content && content.trim()) {
-          console.log(`Successfully downloaded content using ${proxyUrl}`);
+          console.log(`✅ DOWNLOAD SUCCESS using ${proxyUrl}`);
+          console.log(`✅ CONTENT LENGTH: ${content.length}`);
+          console.log(`✅ CONTENT PREVIEW:`, content.substring(0, 300) + (content.length > 300 ? '...' : ''));
           return content;
         }
         
       } catch (proxyError) {
-        console.log(`Proxy ${proxyUrl} failed:`, proxyError);
+        console.log(`❌ PROXY FAILED ${proxyUrl}:`, proxyError);
         continue; // Try next proxy
       }
     }
@@ -189,7 +192,7 @@ const downloadContent = async (url: string): Promise<string> => {
     throw new Error('All CORS proxies failed');
     
   } catch (error) {
-    console.error('Download failed:', error);
+    console.error('❌ DOWNLOAD COMPLETELY FAILED:', error);
     
     // Return a more informative error message based on the URL
     if (url.includes('christitus.com/win')) {

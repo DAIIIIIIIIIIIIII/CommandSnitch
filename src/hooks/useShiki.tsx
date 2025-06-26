@@ -25,7 +25,26 @@ export const useShiki = () => {
   }, []);
 
   const highlightCode = (code: string, language: string) => {
-    if (!highlighter) return code;
+    // Debug logging per capire cosa riceve
+    console.log('HIGHLIGHT CODE INPUT:', {
+      codeLength: code?.length,
+      language,
+      codePreview: code?.substring(0, 200) + (code?.length > 200 ? '...' : ''),
+      hasHighlighter: !!highlighter
+    });
+
+    if (!highlighter) {
+      // Fallback migliore quando Shiki non è disponibile
+      const escapedCode = code
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+      
+      console.log('SHIKI NOT READY - using fallback');
+      return `<pre style="white-space: pre-wrap; word-wrap: break-word; max-height: 400px; overflow-y: auto;"><code>${escapedCode}</code></pre>`;
+    }
 
     try {
       // Map some common language names to Shiki supported ones
@@ -44,13 +63,28 @@ export const useShiki = () => {
       const supportedLangs = highlighter.getLoadedLanguages();
       const finalLang = supportedLangs.includes(shikiLang as any) ? shikiLang : 'text';
 
-      return highlighter.codeToHtml(code, {
+      console.log('SHIKI HIGHLIGHTING:', { originalLang: language, finalLang });
+
+      const highlighted = highlighter.codeToHtml(code, {
         lang: finalLang as any,
         theme: 'github-dark'
       });
+
+      console.log('SHIKI SUCCESS - highlighted length:', highlighted.length);
+      return highlighted;
     } catch (error) {
       console.error('Shiki highlighting error:', error);
-      return `<pre><code>${code}</code></pre>`;
+      
+      // Fallback migliorato con escape HTML
+      const escapedCode = code
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+        
+      console.log('SHIKI ERROR FALLBACK - using escaped HTML');
+      return `<pre style="white-space: pre-wrap; word-wrap: break-word; max-height: 400px; overflow-y: auto; background: #0d1117; color: #c9d1d9; padding: 12px; border-radius: 6px;"><code>${escapedCode}</code></pre>`;
     }
   };
 
