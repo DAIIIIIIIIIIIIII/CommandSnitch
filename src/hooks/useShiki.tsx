@@ -24,6 +24,15 @@ export const useShiki = () => {
     initHighlighter();
   }, []);
 
+  const escapeHtml = (str: string): string => {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  };
+
   const highlightCode = (code: string, language: string) => {
     // Debug logging per capire cosa riceve
     console.log('HIGHLIGHT CODE INPUT:', {
@@ -35,13 +44,7 @@ export const useShiki = () => {
 
     if (!highlighter) {
       // Fallback migliore quando Shiki non è disponibile
-      const escapedCode = code
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-      
+      const escapedCode = escapeHtml(code);
       console.log('SHIKI NOT READY - using fallback');
       return `<pre style="white-space: pre-wrap; word-wrap: break-word; max-height: 400px; overflow-y: auto;"><code>${escapedCode}</code></pre>`;
     }
@@ -74,15 +77,10 @@ export const useShiki = () => {
       return highlighted;
     } catch (error) {
       console.error('Shiki highlighting error:', error);
+      console.log('SHIKI FALLBACK - code preview:', code.substring(0, 500));
       
       // Fallback migliorato con escape HTML
-      const escapedCode = code
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-        
+      const escapedCode = escapeHtml(code);
       console.log('SHIKI ERROR FALLBACK - using escaped HTML');
       return `<pre style="white-space: pre-wrap; word-wrap: break-word; max-height: 400px; overflow-y: auto; background: #0d1117; color: #c9d1d9; padding: 12px; border-radius: 6px;"><code>${escapedCode}</code></pre>`;
     }
