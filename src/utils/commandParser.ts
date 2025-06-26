@@ -116,65 +116,124 @@ const PROGRAMMING_TOOLS = {
   },
 };
 
+const followRedirects = async (url: string): Promise<string> => {
+  try {
+    // First try to get the final URL by following redirects
+    const response = await fetch(url, { 
+      method: 'HEAD', 
+      redirect: 'follow',
+      mode: 'no-cors' 
+    });
+    
+    // If we can get the response URL, use that
+    if (response.url && response.url !== url) {
+      console.log(`Redirect detected: ${url} -> ${response.url}`);
+      return response.url;
+    }
+    
+    return url;
+  } catch (error) {
+    // If HEAD request fails, return original URL
+    console.log(`Redirect detection failed for ${url}, using original URL`);
+    return url;
+  }
+};
+
 const downloadContent = async (url: string): Promise<string> => {
   try {
-    // Try with CORS proxy first
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-    const response = await fetch(proxyUrl);
+    // Step 1: Try to follow redirects to get the final URL
+    const finalUrl = await followRedirects(url);
+    console.log(`Attempting to download from: ${finalUrl}`);
     
-    if (!response.ok) {
-      throw new Error(`CORS proxy returned ${response.status}: ${response.statusText}`);
+    // Step 2: Try multiple CORS proxies in order of reliability
+    const corsProxies = [
+      'https://corsproxy.io/?',
+      'https://api.allorigins.win/get?url=',
+      'https://cors-anywhere.herokuapp.com/'
+    ];
+    
+    for (const proxyUrl of corsProxies) {
+      try {
+        console.log(`Trying proxy: ${proxyUrl}`);
+        
+        let response;
+        let content;
+        
+        if (proxyUrl.includes('allorigins')) {
+          // Special handling for allorigins proxy
+          response = await fetch(`${proxyUrl}${encodeURIComponent(finalUrl)}`);
+          if (response.ok) {
+            const data = await response.json();
+            content = data.contents;
+          }
+        } else {
+          // Standard proxy handling
+          response = await fetch(`${proxyUrl}${finalUrl}`);
+          if (response.ok) {
+            content = await response.text();
+          }
+        }
+        
+        if (content && content.trim()) {
+          console.log(`Successfully downloaded content using ${proxyUrl}`);
+          return content;
+        }
+        
+      } catch (proxyError) {
+        console.log(`Proxy ${proxyUrl} failed:`, proxyError);
+        continue; // Try next proxy
+      }
     }
     
-    const data = await response.json();
-    
-    if (data.contents && data.contents.trim()) {
-      return data.contents;
-    }
-    
-    // If no contents or empty, throw error
-    throw new Error('CORS proxy returned empty content');
+    // If all proxies fail, throw an error
+    throw new Error('All CORS proxies failed');
     
   } catch (error) {
-    // Provide more detailed error information
-    if (error instanceof Error) {
-      if (error.message.includes('Content-Length')) {
-        return `Unable to download content from ${url}
+    console.error('Download failed:', error);
+    
+    // Return a more informative error message based on the URL
+    if (url.includes('christitus.com/win')) {
+      return `# ChrisTitus Windows Utility Script
+# This script typically contains PowerShell commands for Windows optimization
 
-This is likely a PowerShell script that would be downloaded and executed.
-The content couldn't be previewed due to a server configuration issue (Content-Length mismatch).
+# Original URL: ${url}
+# Expected to redirect to: https://github.com/ChrisTitusTech/winutil/releases/latest/download/winutil.ps1
 
-⚠️  WARNING: This command would download and execute code from the internet!
-⚠️  Only run this if you trust the source completely.
+# ⚠️  WARNING: Unable to download the actual script content
+# This command would download and execute a PowerShell script for Windows system optimization
 
-The command would:
-1. Download a script from ${url}
-2. Execute it immediately with PowerShell (| iex)
+# Common features of this script include:
+# - Windows debloating tools
+# - System optimization settings  
+# - Software installation utilities
+# - Registry modifications
 
-For safety, you should:
-- Visit ${url} in your browser first to review the script
-- Download it manually and review the code before running
-- Consider the security implications of running remote scripts`;
-      }
-      
-      if (error.message.includes('CORS') || error.message.includes('network')) {
-        return `Unable to download content from ${url}
+# SECURITY NOTICE:
+# This script makes significant system changes
+# Always review scripts before running with 'iex' (Invoke-Expression)
 
-This appears to be a script download command that couldn't be previewed due to network restrictions.
-
-⚠️  WARNING: This command would download and execute code from the internet!
-
-The command would:
-1. Download a script from ${url}
-2. Execute it immediately (${url.includes('win') ? 'likely a Windows setup/utility script' : 'unknown script type'})
-
-For security, please:
-- Visit the URL in your browser to see what it contains
-- Only run if you trust the source completely`;
-      }
+Write-Host "ChrisTitus Windows Utility - Content not available for preview"`;
     }
     
-    throw new Error(`Unable to download content from ${url}: ${error}`);
+    // Generic fallback message
+    return `# Script Download Failed
+# Original URL: ${url}
+
+# ⚠️  Unable to download script content for preview
+# This PowerShell command would download and execute code from the internet
+
+# The command structure:
+# irm "${url}" | iex
+# 
+# - irm (Invoke-RestMethod) downloads the content
+# - | (pipe) passes it to the next command  
+# - iex (Invoke-Expression) executes the downloaded code
+
+# SECURITY WARNING:
+# Only run this command if you completely trust the source
+# Consider downloading and reviewing the script manually first
+
+Write-Host "Script content not available for preview - download failed"`;
   }
 };
 
@@ -273,15 +332,16 @@ export const analyzeCommand = async (command: string): Promise<CommandAnalysis> 
     // If there's a URL, download the content
     if (commandUrls.length > 0) {
       try {
+        console.log(`Analyzing PowerShell command with URL: ${commandUrls[0]}`);
         const content = await downloadContent(commandUrls[0]);
         result.extractedCode = content;
         result.codeLanguage = detectCodeLanguage(content);
-        result.urls = extractUrlsFromCode(content);
+        result.urls = [...new Set(extractUrlsFromCode(content))]; // Deduplicate URLs
         
         // Analyze content type
         if (content.includes('#!/bin/bash') || content.includes('#!/bin/sh')) {
           result.warnings.push('Content is a bash script that would be executed');
-        } else if (content.includes('function ') || content.includes('$')) {
+        } else if (content.includes('function ') || content.includes('$') || content.includes('param(')) {
           result.warnings.push('Content contains PowerShell code');
         } else if (content.includes('python') || content.includes('import ')) {
           result.warnings.push('Content contains Python code');
@@ -293,10 +353,15 @@ export const analyzeCommand = async (command: string): Promise<CommandAnalysis> 
         }
         
       } catch (error) {
-        result.extractedCode = `Download error: ${error}`;
+        console.error('PowerShell download error:', error);
+        result.extractedCode = cleanCommand; // Show original command as fallback
+        result.codeLanguage = 'powershell';
         result.warnings.push('Unable to download content for preview');
         result.warnings.push('Command would download and execute remote code - exercise extreme caution!');
       }
+    } else {
+      result.extractedCode = cleanCommand;
+      result.codeLanguage = 'powershell';
     }
     
     if (cleanCommand.includes('select -ExpandProperty Content')) {
