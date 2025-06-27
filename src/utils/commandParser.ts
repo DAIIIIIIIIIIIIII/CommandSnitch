@@ -291,7 +291,7 @@ export const analyzeCommand = async (command: string): Promise<CommandAnalysis> 
       // Extract package name
       const match = cleanCommand.match(manager.installPattern);
       if (match) {
-        const packageName = match[1] || match[2]; // Some patterns have multiple groups
+        const packageName = match[1] || match[2];
         if (packageName) {
           result.packageInfo = {
             packageName: packageName,
@@ -326,6 +326,36 @@ export const analyzeCommand = async (command: string): Promise<CommandAnalysis> 
     }
   }
 
+  // NEW: Check for IEX (New-Object Net.WebClient).DownloadString pattern
+  const iexWebClientPattern = /IEX\s*\(\s*New-Object\s+Net\.WebClient\s*\)\.DownloadString\s*\(\s*['"]([^'"]+)['"]\s*\)/i;
+  const iexWebClientMatch = cleanCommand.match(iexWebClientPattern);
+  
+  if (iexWebClientMatch) {
+    result.type = 'PowerShell - WebClient Download & Execute';
+    result.description = 'PowerShell command using WebClient to download and execute code';
+    
+    const url = iexWebClientMatch[1];
+    try {
+      console.log(`Analyzing IEX WebClient command with URL: ${url}`);
+      const content = await downloadContent(url);
+      result.extractedCode = content;
+      result.codeLanguage = detectCodeLanguage(content);
+      result.urls = [...new Set(extractUrlsFromCode(content))];
+      
+      result.warnings.push('DANGER: Command will automatically execute the downloaded code!');
+      result.warnings.push('Uses .NET WebClient for download');
+      
+    } catch (error) {
+      console.error('IEX WebClient download error:', error);
+      result.extractedCode = cleanCommand;
+      result.codeLanguage = 'powershell';
+      result.warnings.push('Unable to download content for preview');
+      result.warnings.push('Command would download and execute remote code - exercise extreme caution!');
+    }
+    
+    return result;
+  }
+
   // Analyze PowerShell commands (iwr, Invoke-WebRequest, irm, Invoke-RestMethod)
   if (cleanCommand.includes('iwr') || cleanCommand.includes('Invoke-WebRequest') || 
       cleanCommand.includes('irm') || cleanCommand.includes('Invoke-RestMethod')) {
@@ -339,7 +369,7 @@ export const analyzeCommand = async (command: string): Promise<CommandAnalysis> 
         const content = await downloadContent(commandUrls[0]);
         result.extractedCode = content;
         result.codeLanguage = detectCodeLanguage(content);
-        result.urls = [...new Set(extractUrlsFromCode(content))]; // Deduplicate URLs
+        result.urls = [...new Set(extractUrlsFromCode(content))];
         
         // Analyze content type
         if (content.includes('#!/bin/bash') || content.includes('#!/bin/sh')) {
@@ -357,7 +387,7 @@ export const analyzeCommand = async (command: string): Promise<CommandAnalysis> 
         
       } catch (error) {
         console.error('PowerShell download error:', error);
-        result.extractedCode = cleanCommand; // Show original command as fallback
+        result.extractedCode = cleanCommand;
         result.codeLanguage = 'powershell';
         result.warnings.push('Unable to download content for preview');
         result.warnings.push('Command would download and execute remote code - exercise extreme caution!');

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Search, AlertTriangle, Code, Copy, Check, RotateCcw, ExternalLink, Package } from 'lucide-react';
 import { analyzeCommand } from '../utils/commandParser';
@@ -94,6 +93,23 @@ const CommandAnalyzer = () => {
         return 'text-green-300';
     }
   };
+
+  const openUrl = (url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const renderUrlWithButton = (url: string, index: number) => (
+    <div key={index} className="bg-gray-700 rounded p-2 flex items-center justify-between">
+      <code className="text-xs text-yellow-300 break-all flex-1 mr-2">{url}</code>
+      <button
+        onClick={() => openUrl(url)}
+        className="flex-shrink-0 p-1 text-gray-400 hover:text-blue-400 hover:bg-blue-900/20 rounded transition-colors"
+        title="Open URL in new tab"
+      >
+        <ExternalLink className="w-3 h-3" />
+      </button>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-900 flex items-start justify-center p-4">
@@ -219,15 +235,13 @@ const CommandAnalyzer = () => {
                   <div className="flex items-center space-x-2">
                     <span className="text-xs text-gray-400 uppercase">{result.codeLanguage}</span>
                     {result.packageInfo?.searchUrl && (
-                      <a
-                        href={result.packageInfo.searchUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        onClick={() => openUrl(result.packageInfo!.searchUrl!)}
                         className="inline-flex items-center space-x-1 text-xs text-blue-300 hover:text-blue-200 transition-colors"
                       >
                         <span>View package information</span>
                         <ExternalLink className="w-3 h-3" />
-                      </a>
+                      </button>
                     )}
                   </div>
                 </div>
@@ -255,11 +269,9 @@ const CommandAnalyzer = () => {
               <div className="space-y-2">
                 <span className="text-sm font-medium text-yellow-400">URLS DETECTED IN CODE:</span>
                 <div className="space-y-1">
-                  {[...new Set(result.urls)].map((url: string, index: number) => (
-                    <div key={index} className="bg-gray-700 rounded p-2">
-                      <code className="text-xs text-yellow-300 break-all">{url}</code>
-                    </div>
-                  ))}
+                  {[...new Set(result.urls)].map((url: string, index: number) => 
+                    renderUrlWithButton(url, index)
+                  )}
                 </div>
               </div>
             )}
