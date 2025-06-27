@@ -2,6 +2,8 @@
 {
   "appId": "com.commandanalyzer.app",
   "productName": "Command Analyzer",
+  "description": "Analizza i comandi di terminal per vedere il codice che andranno ad eseguire",
+  "author": "Lovable",
   "directories": {
     "output": "dist-electron"
   },
