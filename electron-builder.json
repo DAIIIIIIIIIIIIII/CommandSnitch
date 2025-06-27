@@ -1,0 +1,23 @@
+
+{
+  "appId": "com.commandanalyzer.app",
+  "productName": "Command Analyzer",
+  "directories": {
+    "output": "dist-electron"
+  },
+  "files": [
+    "dist/**/*",
+    "public/electron.js",
+    "public/favicon.ico"
+  ],
+  "mac": {
+    "category": "public.app-category.developer-tools",
+    "target": "dmg"
+  },
+  "win": {
+    "target": "nsis"
+  },
+  "linux": {
+    "target": "AppImage"
+  }
+}
