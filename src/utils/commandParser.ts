@@ -1,3 +1,5 @@
+import { detectBinaryContent, formatFileSize } from './binaryDetection';
+
 export interface CommandAnalysis {
   type: string;
   description: string;
@@ -11,6 +13,13 @@ export interface CommandAnalysis {
     packageManager: string;
     description: string;
     searchUrl?: string;
+  };
+  binaryInfo?: {
+    isBinary: boolean;
+    fileName?: string;
+    fileExtension?: string;
+    mimeType?: string;
+    size?: number;
   };
 }
 
@@ -179,6 +188,14 @@ const downloadContent = async (url: string): Promise<string> => {
           console.log(`✅ DOWNLOAD SUCCESS using ${proxyUrl}`);
           console.log(`✅ CONTENT LENGTH: ${content.length}`);
           console.log(`✅ CONTENT PREVIEW:`, content.substring(0, 300) + (content.length > 300 ? '...' : ''));
+          
+          // Check if content is binary before returning
+          const binaryCheck = detectBinaryContent(content, finalUrl);
+          if (binaryCheck.isBinary) {
+            console.log(`🔍 BINARY DETECTED:`, binaryCheck);
+            return generateBinaryWarningMessage(binaryCheck, finalUrl);
+          }
+          
           return content;
         }
         
@@ -238,6 +255,40 @@ Write-Host "ChrisTitus Windows Utility - Content not available for preview"`;
 
 Write-Host "Script content not available for preview - download failed"`;
   }
+};
+
+const generateBinaryWarningMessage = (binaryInfo: any, url: string): string => {
+  const fileName = binaryInfo.fileName || 'unknown file';
+  const fileExtension = binaryInfo.fileExtension || 'unknown';
+  const mimeType = binaryInfo.mimeType || 'unknown';
+  const sizeInfo = binaryInfo.size ? formatFileSize(binaryInfo.size) : 'unknown size';
+
+  return `# ⚠️  BINARY FILE DETECTED
+# This command downloads a binary file, not a script!
+
+# File Information:
+# - File name: ${fileName}
+# - File type: ${fileExtension}
+# - MIME type: ${mimeType}
+# - Estimated size: ${sizeInfo}
+# - Source URL: ${url}
+
+# ❌ CANNOT PREVIEW BINARY FILES
+# This viewer can only display text-based scripts and code.
+
+# 🚨 SECURITY WARNING:
+# This command would download and potentially execute a binary file.
+# Binary files can contain malware or unwanted software.
+
+# Recommendations:
+# 1. Only download from trusted sources
+# 2. Scan with antivirus before executing
+# 3. Consider using VirusTotal to check the file
+# 4. Verify the file's digital signature if available
+
+Write-Host "${binaryInfo.warning || 'Binary file detected'}"
+Write-Host "File: ${fileName} (${fileExtension})"
+Write-Host "Source: ${url}"`;
 };
 
 const detectCodeLanguage = (content: string): string => {

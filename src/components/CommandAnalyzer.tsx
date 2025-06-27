@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, AlertTriangle, Code, Copy, Check, RotateCcw, ExternalLink, Package } from 'lucide-react';
+import { Search, AlertTriangle, Code, Copy, Check, RotateCcw, ExternalLink, Package, FileX } from 'lucide-react';
 import { analyzeCommand } from '../utils/commandParser';
 import { useShiki } from '../hooks/useShiki';
 
@@ -195,6 +195,36 @@ const CommandAnalyzer = () => {
               <div className="text-xs text-gray-300">{result.description}</div>
             </div>
 
+            {/* Binary file warning */}
+            {result.binaryInfo?.isBinary && (
+              <div className="bg-red-900/20 border border-red-500/30 rounded-md p-3">
+                <div className="flex items-center space-x-2 mb-2">
+                  <FileX className="w-4 h-4 text-red-400" />
+                  <span className="text-sm font-medium text-red-400">BINARY FILE DETECTED</span>
+                </div>
+                <div className="space-y-2 text-xs">
+                  {result.binaryInfo.fileName && (
+                    <div className="text-red-300">
+                      <span className="font-medium">File:</span> {result.binaryInfo.fileName}
+                    </div>
+                  )}
+                  {result.binaryInfo.fileExtension && (
+                    <div className="text-red-300">
+                      <span className="font-medium">Type:</span> {result.binaryInfo.fileExtension}
+                    </div>
+                  )}
+                  {result.binaryInfo.mimeType && (
+                    <div className="text-red-300">
+                      <span className="font-medium">MIME:</span> {result.binaryInfo.mimeType}
+                    </div>
+                  )}
+                  <div className="text-red-200 mt-2 p-2 bg-red-900/30 rounded">
+                    ⚠️ This command downloads a binary file, not a script. Binary files cannot be previewed and may contain executable code.
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Package information */}
             {result.packageInfo && (
               <div className="bg-green-900/20 border border-green-500/30 rounded-md p-3">
@@ -226,7 +256,7 @@ const CommandAnalyzer = () => {
             )}
 
             {/* Package to install or Code that would be executed */}
-            {result.extractedCode && (
+            {result.extractedCode && !result.binaryInfo?.isBinary && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-green-400">
@@ -261,6 +291,21 @@ const CommandAnalyzer = () => {
                     }}
                   />
                 )}
+              </div>
+            )}
+
+            {/* Binary file info instead of code */}
+            {result.binaryInfo?.isBinary && result.extractedCode && (
+              <div className="space-y-2">
+                <span className="text-sm font-medium text-red-400">BINARY FILE WARNING:</span>
+                <div className="bg-red-900/10 border border-red-500/30 rounded-md p-3 text-xs">
+                  <div 
+                    className="text-red-200 whitespace-pre-wrap font-mono"
+                    dangerouslySetInnerHTML={{ 
+                      __html: result.extractedCode.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                    }}
+                  />
+                </div>
               </div>
             )}
 
