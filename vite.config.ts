@@ -9,6 +9,11 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    historyApiFallback: true, // fallback per SPA
+  },
+  build: {
+    outDir: "dist",
+    emptyOutDir: true,
   },
   plugins: [
     react(),
