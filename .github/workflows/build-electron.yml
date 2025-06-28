@@ -45,6 +45,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.event_name == 'release'
         with:
-          files: dist-electron/*
+          files: dist-electron/**/*.{exe,msi,nsis}
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
