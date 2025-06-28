@@ -15,6 +15,9 @@
   "extraMetadata": {
     "main": "public/electron.cjs"
   },
-  "publish": "always"
+  "publish": {
+  "provider": "github"
+}
+
 
 }
