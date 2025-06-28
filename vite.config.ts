@@ -9,10 +9,10 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
-    historyApiFallback: true, // fallback per SPA
+    historyApiFallback: true,
   },
   build: {
-    outDir: "dist",
+    outDir: "public/dist", // qui va messo il build output
     emptyOutDir: true,
   },
   plugins: [
