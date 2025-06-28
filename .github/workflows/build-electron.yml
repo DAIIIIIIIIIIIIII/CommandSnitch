@@ -11,11 +11,7 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-    
-    strategy:
-      matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: windows-latest
     
     steps:
       - name: Checkout code
@@ -33,22 +29,13 @@ jobs:
       - name: Build React app
         run: npm run build
       
-      - name: Build Electron app (Windows)
-        if: matrix.os == 'windows-latest'
+      - name: Build Electron app for Windows
         run: npx electron-builder --win
-      
-      - name: Build Electron app (macOS)
-        if: matrix.os == 'macos-latest'
-        run: npx electron-builder --mac
-      
-      - name: Build Electron app (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: npx electron-builder --linux
       
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: electron-app-${{ matrix.os }}
+          name: electron-app-windows
           path: dist-electron/
       
       - name: Release
