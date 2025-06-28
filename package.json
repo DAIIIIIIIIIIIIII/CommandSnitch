@@ -1,9 +1,9 @@
 {
-  "name": "vite_react_shadcn_ts",
   "private": true,
-  "version": "0.0.0",
-  "description": "CommandSnitch is a simple tool where you paste a suspicious terminal command (like iwr | iex) and it instantly shows what the code really does. It auto-follows URLs, decodes base64 or obfuscated parts, and reveals any hidden scripts or dangerous actions like .exe downloads. ",
-  "author": "bandiera.ivan@protonmail.com",
+  "name": "command-analyzer",
+  "version": "1.0.0-beta",
+  "description": "Advanced tool for analyzing terminal commands and scripts on Windows",
+  "author": "Ivan Bandiera <bandiera.ivan@protonmail.com>",
   "type": "module",
   "scripts": {
     "dev": "vite",
