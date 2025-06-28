@@ -6,13 +6,13 @@
   },
   "files": [
     "dist/**/*",
-    "public/electron.js",
+    "public/electron.cjs",
     "public/favicon.ico"
   ],
   "win": {
     "target": "nsis"
   },
   "extraMetadata": {
-    "main": "public/electron.js"
+    "main": "public/electron.cjs"
   }
 }
