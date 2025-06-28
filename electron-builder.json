@@ -15,4 +15,6 @@
   "extraMetadata": {
     "main": "public/electron.js"
   }
+  "publish": "always"
+
 }
