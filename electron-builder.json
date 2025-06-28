@@ -14,7 +14,7 @@
   },
   "extraMetadata": {
     "main": "public/electron.cjs"
-  }
+  },
   "publish": "always"
 
 }
