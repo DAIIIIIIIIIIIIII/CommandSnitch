@@ -11,5 +11,8 @@
   ],
   "win": {
     "target": "nsis"
+  },
+  "extraMetadata": {
+    "main": "public/electron.js"
   }
 }
